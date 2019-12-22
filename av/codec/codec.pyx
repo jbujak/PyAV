@@ -121,11 +121,11 @@ Capabilities = define_enum('Capabilities', 'av.codec', (
         """Codec is intra only."""),
     ('LOSSLESS', lib.AV_CODEC_CAP_LOSSLESS,
         """Codec is lossless."""),
-    ('HARDWARE', lib.AV_CODEC_CAP_HARDWARE,
+    ('HARDWARE',  1 << 18, #lib.AV_CODEC_CAP_HARDWARE,  # FFmpeg 4.0
         """Codec is backed by a hardware implementation. Typically used to
         identify a non-hwaccel hardware decoder. For information about hwaccels, use
         avcodec_get_hw_config() instead."""),
-    ('HYBRID', lib.AV_CODEC_CAP_HYBRID,
+    ('HYBRID',  1 << 19, # lib.AV_CODEC_CAP_HYBRID,  # FFmpeg 4.0
         """Codec is potentially backed by a hardware implementation, but not
         necessarily. This is used instead of AV_CODEC_CAP_HARDWARE, if the
         implementation provides some sort of internal fallback."""),
