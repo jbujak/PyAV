@@ -87,11 +87,17 @@ cdef class Stream(object):
         if self.container.ptr.iformat:
 
             # Find the codec.
-            self._codec = lib.avcodec_find_decoder(self._codec_context.codec_id)
+            h264_id = lib.avcodec_find_decoder_by_name('h264').id
+            h265_id = lib.avcodec_find_decoder_by_name('hevc').id
+            my_id = self._codec_context.codec_id
+            if container.hwaccel and my_id == h264_id:
+                self._codec = lib.avcodec_find_decoder_by_name('h264_cuvid')
+            elif container.hwaccel and my_id == h265_id:
+                self._codec = lib.avcodec_find_decoder_by_name('hevc_cuvid')
+            else:
+                self._codec = lib.avcodec_find_decoder(self._codec_context.codec_id)
             if not self._codec:
-                # TODO: Setup a dummy CodecContext.
-                self.codec_context = None
-                return
+                raise RuntimeError('Cannot find codec')
 
         # This is an output container!
         else:

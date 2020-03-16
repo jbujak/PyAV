@@ -11,6 +11,9 @@ from av.video.format cimport get_video_format, VideoFormat
 from av.video.frame cimport VideoFrame, alloc_video_frame
 from av.video.reformatter cimport VideoReformatter
 
+cdef extern from  "cuda_reformatter.c" nogil:
+    cdef int convert_and_transfer_nv12_to_bgr24(lib.AVFrame *dst, lib.AVFrame *src)
+
 
 cdef lib.AVPixelFormat _get_hw_format(lib.AVCodecContext *ctx, lib.AVPixelFormat *pix_fmts):
     i = 0
@@ -36,7 +39,7 @@ cdef class VideoCodecContext(CodecContext):
         CodecContext._init(self, ptr, codec)  # TODO: Can this be `super`?
 
         if self.hwaccel is not None:
-            self._setup_hw_decoder(codec)
+            self._setup_hw_decoder(<lib.AVCodec*>codec)
 
         self._build_format()
         self.encoded_frame_count = 0
@@ -136,8 +139,14 @@ cdef class VideoCodecContext(CodecContext):
         if self.using_hwaccel and frame.ptr.format == self.hw_pix_fmt:
             # retrieve data from GPU to CPU
             frame_sw = self._alloc_next_frame()
+            dst_format = self.hwaccel.get("dst_format", "nv12")
 
-            ret = lib.av_hwframe_transfer_data(frame_sw.ptr, frame.ptr, 0)
+            if dst_format == "nv12":
+                ret = lib.av_hwframe_transfer_data(frame_sw.ptr, frame.ptr, 0)
+            elif dst_format == "bgr24":
+                ret = convert_and_transfer_nv12_to_bgr24(frame_sw.ptr, frame.ptr)
+            else:
+                raise RuntimeError("HW accelerated conversion to " + dst_format + " is not supported")
             if (ret < 0):
                 raise RuntimeError("Error transferring the data to system memory")
 

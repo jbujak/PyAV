@@ -149,11 +149,18 @@ else:
     ffmpeg_lib = []
     ffmpeg_include = []
 
+CUDA_DIR = os.environ.get('CUDA_HOME')
+if CUDA_DIR is not None:
+    cuda_include = [os.path.join(CUDA_DIR, 'include')]
+else:
+    cuda_include = []
+
+
 
 # The "extras" to be supplied to every one of our modules.
 # This is expanded heavily by the `config` command.
 extension_extra = {
-    'include_dirs': ['include'] + ffmpeg_include,  # The first are PyAV's includes.
+    'include_dirs': ['include'] + ffmpeg_include + cuda_include,  # The first are PyAV's includes.
     'libraries'   : [],
     'library_dirs': ffmpeg_lib,
 }
