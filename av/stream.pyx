@@ -87,6 +87,10 @@ cdef class Stream(object):
         if self.container.ptr.iformat:
 
             # Find the codec.
+            # FFMPEG doesn't by default use codecs from external libraries
+            # (e.g. *_cuvid) for decoding, so we need to select correct ones by name.
+            # If it's needed to add HW acceleration support for other formats,
+            # add them here.
             h264_id = lib.avcodec_find_decoder_by_name('h264').id
             h265_id = lib.avcodec_find_decoder_by_name('hevc').id
             my_id = self._codec_context.codec_id
