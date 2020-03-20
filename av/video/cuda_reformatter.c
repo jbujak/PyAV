@@ -17,10 +17,12 @@ int convert_and_transfer_nv12_to_bgr24(AVFrame *dst, AVFrame *src) {
         .width = src->width,
         .height = src->height
     };
+    // We pack all three colors into one plane, so it will be 3 times bigger
     int new_linesize = src->linesize[0] * 3;
 
     cu->cuCtxPushCurrent(hwctx->cuda_ctx);
 
+    // Allocate temporary buffer on GPU
     cudaStatus = cu->cuMemAlloc(&tmp, new_linesize * src->height);
     if (cudaStatus != CUDA_SUCCESS) {
         fprintf(stderr, "cuMemAlloc failed\n");
@@ -28,6 +30,7 @@ int convert_and_transfer_nv12_to_bgr24(AVFrame *dst, AVFrame *src) {
         goto alloc_failed;
     }
 
+    // Perform conversion on GPU
     NppStatus status = nppiNV12ToBGR_8u_P2C3R(
             (Npp8u*)src->data,
             src->linesize[0],
@@ -41,6 +44,7 @@ int convert_and_transfer_nv12_to_bgr24(AVFrame *dst, AVFrame *src) {
         goto error;
     }
 
+    // Wait for conversion to finish
     cudaStatus = cu->cuStreamSynchronize(0);
     if (cudaStatus != CUDA_SUCCESS) {
         fprintf(stderr, "cuStreamSynchronize failed\n");
@@ -48,7 +52,10 @@ int convert_and_transfer_nv12_to_bgr24(AVFrame *dst, AVFrame *src) {
         goto error;
     }
 
+    // Allocate CPU buffer for result
     unsigned char *data_host = malloc(new_linesize * src->height);
+
+    // Copy result from GPU to CPU
     CUDA_MEMCPY2D cpy = {
         .srcMemoryType = CU_MEMORYTYPE_DEVICE,
         .dstMemoryType = CU_MEMORYTYPE_HOST,
@@ -59,7 +66,6 @@ int convert_and_transfer_nv12_to_bgr24(AVFrame *dst, AVFrame *src) {
         .WidthInBytes  = new_linesize,
         .Height        = src->height,
     };
-
     cudaStatus = cu->cuMemcpy2DAsync(&cpy, hwctx->stream);
     if (cudaStatus != CUDA_SUCCESS) {
         fprintf(stderr, "cuMemcpy2DAsync failed\n");
@@ -67,6 +73,7 @@ int convert_and_transfer_nv12_to_bgr24(AVFrame *dst, AVFrame *src) {
         goto error;
     }
 
+    // Wait for the transfer to finish
     cudaStatus = cu->cuStreamSynchronize(hwctx->stream);
     if (cudaStatus != CUDA_SUCCESS) {
         fprintf(stderr, "cuStreamSynchronize failed\n");
