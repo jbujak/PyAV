@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <npp.h>
+#include <nppi_color_conversion.h>
 
 #include "libavutil/hwcontext.h"
 #include "libavutil/hwcontext_cuda_internal.h"
